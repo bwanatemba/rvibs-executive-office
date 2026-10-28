@@ -1,0 +1,22 @@
+# Prevent directory listing
+Options -Indexes
+
+# Default charset
+AddDefaultCharset UTF-8
+
+# Security headers (only if mod_headers is available)
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Deny access to config files
+<FilesMatch "(config|database)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Deny access to schema files
+<FilesMatch "\.sql$">
+    Require all denied
+</FilesMatch>
