@@ -10,10 +10,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($page_title ?? APP_NAME) ?> · <?= e(APP_NAME) ?></title>
+    <link rel="icon" type="image/png" href="assets/images/rvibs-logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>">
 </head>
 <body>
 <div class="app">
@@ -21,7 +22,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="logo">
-                <span class="logo-mark">RV</span>
+                <img class="logo-mark" src="assets/images/rvibs-logo.png" alt="RVIBS">
                 <div class="logo-text">
                     <span class="logo-title">Executive Office</span>
                     <span class="logo-sub">RVIBS & ATS</span>

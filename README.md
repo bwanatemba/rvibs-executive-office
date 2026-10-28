@@ -82,11 +82,11 @@ Edit `config/config.php` and set:
 6. Add your redirect URI (e.g. `https://exec.rvibs.ac.ke/oauth-callback.php`)
 7. Copy Client ID and Client Secret to `config/config.php`
 
-### 5. Run the installer
-Visit `https://yourdomain.com/install.php` in your browser and click "Run Installation". This creates all database tables and seeds initial data.
+### 5. Import the database
+Use cPanel phpMyAdmin to select your database and import `database/schema.sql` once. This creates the tables, production roles, initial administrator and director accounts, and default settings.
 
-### 6. Delete installer
-Delete `install.php` and optionally `dev-login.php` from your server.
+### 6. Verify production configuration
+Configure Google OAuth credentials, the HTTPS callback URL, and the application URL before enabling access. Machine-specific credentials can be set in the ignored `config/config.local.php`, which returns an array of configuration values. Remove any legacy development login and browser installer files from existing server deployments; uploading this version alone may leave old files on the server.
 
 ### 7. Log in
 Visit `https://yourdomain.com/login.php` and sign in with your @rvibs.ac.ke Google Workspace account.
@@ -113,11 +113,9 @@ rvibs-executive-office/
 ├── database/
 │   └── schema.sql          # Full database schema + seed data
 ├── .htaccess               # Security headers, directory protection
-├── install.php             # One-time installer (delete after use)
 ├── index.php               # Redirects to login or dashboard
 ├── login.php               # Google login page
 ├── oauth-callback.php      # Google OAuth callback
-├── dev-login.php           # Dev login (remove in production)
 ├── logout.php              # Session destroy
 ├── dashboard.php           # CEO dashboard
 ├── outcomes.php            # 90-day outcomes

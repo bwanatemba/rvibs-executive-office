@@ -4,6 +4,15 @@ require_once __DIR__ . '/includes/google_auth.php';
 require_once __DIR__ . '/includes/auth.php';
 
 // Handle Google OAuth callback
+$state = $_GET['state'] ?? '';
+$request = is_string($state) ? ($_SESSION['google_oauth_states'][$state] ?? null) : null;
+if (!$request || $request['created'] < time() - 600) {
+    redirect('login.php?error=oauth');
+}
+unset($_SESSION['google_oauth_states'][$state]);
+if (isset($_GET['error'])) {
+    redirect($request['silent'] ? 'login.php' : 'login.php?error=oauth');
+}
 if (!isset($_GET['code'])) {
     redirect('login.php?error=oauth');
 }
@@ -29,7 +38,14 @@ if (isset($user['error'])) {
     redirect('login.php?error=domain');
 }
 
+// Pending users must not receive an authenticated dashboard session.
+if (empty($user['role_key'])) {
+    redirect('login.php?error=pending');
+}
+
 // Set session
+session_regenerate_id(true);
+unset($_SESSION['google_auto_login_disabled'], $_SESSION['google_auto_login_attempted'], $_SESSION['google_oauth_states']);
 $_SESSION['user_id'] = $user['id'];
 $_SESSION['user_email'] = $user['email'];
 

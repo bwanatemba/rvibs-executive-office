@@ -16,6 +16,8 @@ function get_db() {
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
         } catch (PDOException $e) {
+            error_log('Database connection failed: ' . $e->getMessage());
+            http_response_code(503);
             die('Database connection failed: ' . $e->getMessage());
         }
     }

@@ -10,14 +10,20 @@ require_once __DIR__ . '/../config/database.php';
 /**
  * Build the Google OAuth authorization URL
  */
-function google_auth_url() {
+function google_auth_url($silent = false) {
+    $state = bin2hex(random_bytes(32));
+    $_SESSION['google_oauth_states'][$state] = ['silent' => $silent, 'created' => time()];
+    foreach ($_SESSION['google_oauth_states'] as $key => $request) {
+        if ($request['created'] < time() - 600) unset($_SESSION['google_oauth_states'][$key]);
+    }
     $params = [
         'client_id' => GOOGLE_CLIENT_ID,
         'redirect_uri' => GOOGLE_REDIRECT_URI,
         'response_type' => 'code',
         'scope' => 'openid email profile',
         'access_type' => 'online',
-        'prompt' => 'select_account',
+        'prompt' => $silent ? 'none' : 'select_account',
+        'state' => $state,
     ];
     return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params);
 }

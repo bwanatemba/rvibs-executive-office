@@ -12,7 +12,7 @@ AddDefaultCharset UTF-8
 </IfModule>
 
 # Deny access to config files
-<FilesMatch "(config|database)\.php$">
+<FilesMatch "^(config(?:\.local)?|database)\.php$">
     Require all denied
 </FilesMatch>
 

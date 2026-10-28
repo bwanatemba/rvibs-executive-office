@@ -106,18 +106,10 @@ img { max-width: 100%; display: block; }
     justify-content: space-between;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.logo { display: flex; align-items: center; gap: 0.75rem; }
+.logo { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; min-width: 0; }
 .logo-mark {
-    width: 40px; height: 40px;
-    border-radius: var(--radius);
-    background: linear-gradient(135deg, var(--c-accent), var(--c-accent-dark));
-    color: #fff;
-    font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+    width: 200px; max-width: 100%; height: auto;
     flex-shrink: 0;
 }
 .logo-text { display: flex; flex-direction: column; }
@@ -608,16 +600,8 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; 
     padding: 2.5rem;
 }
 .login-logo {
-    width: 56px; height: 56px;
-    border-radius: var(--radius);
-    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-dark));
-    color: #fff;
-    font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+    width: 320px; max-width: 100%; height: auto;
     margin: 0 auto 1.5rem;
 }
 .login-title { text-align: center; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
