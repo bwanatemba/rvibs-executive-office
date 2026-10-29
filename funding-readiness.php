@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Institutional Readiness';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -24,7 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$institution, $legal, $evidence, $status, $notes, $user['id'], $id]);
             log_action('update', 'readiness', $id);
         }
-        toast_redirect('Readiness record saved', 'funding-readiness.php');
+        $_SESSION['readiness_save_success'] = $action === 'create'
+            ? 'New evidence saved successfully.'
+            : 'Evidence details updated successfully.';
+        redirect('funding-readiness.php');
     } elseif ($action === 'delete') {
         $id = (int)$_POST['id'];
         $db->prepare('DELETE FROM funding_readiness WHERE id=?')->execute([$id]);
@@ -35,6 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $readiness = $db->query('SELECT * FROM funding_readiness ORDER BY institution')->fetchAll();
 $csrf = csrf_token();
+$saveSuccess = $_SESSION['readiness_save_success'] ?? '';
+unset($_SESSION['readiness_save_success']);
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -42,7 +49,7 @@ $csrf = csrf_token();
         <h2 class="section-title">Institutional Readiness</h2>
         <p class="section-sub">Establish eligibility, legal applicant routes and supporting evidence for each institution</p>
     </div>
-    <button class="btn btn-primary" onclick="openModal('modalReadiness')">
+    <button class="btn btn-primary" onclick="addReadiness()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Readiness Record
     </button>
@@ -71,12 +78,7 @@ $csrf = csrf_token();
                     <?php if ($r['notes']): ?><div class="text-xs text-3 mb-3"><strong>Notes:</strong> <?= e($r['notes']) ?></div><?php endif; ?>
                     <div class="flex gap-2">
                         <button class="btn btn-outline btn-sm" onclick="editReadiness(<?= htmlspecialchars(json_encode($r), ENT_QUOTES) ?>)">Edit</button>
-                        <form method="POST" style="display:inline" onsubmit="return confirm('Delete?')">
-                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= $r['id'] ?>">
-                            <button class="btn-ghost btn-sm">Delete</button>
-                        </form>
+                        <button type="button" class="btn-ghost btn-sm" data-readiness-id="<?= (int)$r['id'] ?>" data-institution="<?= e($r['institution']) ?>" onclick="confirmDeleteReadiness(this)">Delete</button>
                     </div>
                     <div class="text-xs text-3 mt-2">Updated <?= e(fmt_date($r['updated_at'])) ?></div>
                 </div>
@@ -129,7 +131,60 @@ $csrf = csrf_token();
     </div>
 </div>
 
+<div class="modal-overlay" id="modalDeleteReadiness">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteReadinessTitle" aria-describedby="deleteReadinessMessage">
+        <div class="modal-header">
+            <h2 class="modal-title" id="deleteReadinessTitle">Delete evidence?</h2>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('modalDeleteReadiness')">&times;</button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" id="deleteReadinessId">
+            <div class="modal-body">
+                <p id="deleteReadinessMessage">Are you sure you want to delete the readiness evidence for <strong id="deleteReadinessInstitution"></strong>? This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="deleteReadinessCancel" onclick="closeModal('modalDeleteReadiness')">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete Evidence</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php if ($saveSuccess): ?>
+<div class="modal-overlay" id="modalReadinessSuccess">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="readinessSuccessTitle" aria-describedby="readinessSuccessMessage">
+        <div class="modal-header">
+            <h2 class="modal-title" id="readinessSuccessTitle">Evidence saved</h2>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('modalReadinessSuccess')">&times;</button>
+        </div>
+        <div class="modal-body"><p id="readinessSuccessMessage" role="status"><?= e($saveSuccess) ?></p></div>
+        <div class="modal-footer"><button type="button" class="btn btn-primary" id="readinessSuccessDone" onclick="closeModal('modalReadinessSuccess')">Done</button></div>
+    </div>
+</div>
+<?php endif; ?>
+
 <script>
+<?php if ($saveSuccess): ?>
+document.addEventListener('DOMContentLoaded', function () {
+    openModal('modalReadinessSuccess');
+    document.getElementById('readinessSuccessDone').focus();
+});
+<?php endif; ?>
+function addReadiness() {
+    document.querySelector('#modalReadiness form').reset();
+    document.getElementById('readinessTitle').textContent = 'Add Readiness Record';
+    document.getElementById('readinessAction').value = 'create';
+    document.getElementById('readinessId').value = '';
+    openModal('modalReadiness');
+}
+function confirmDeleteReadiness(button) {
+    document.getElementById('deleteReadinessId').value = button.dataset.readinessId;
+    document.getElementById('deleteReadinessInstitution').textContent = button.dataset.institution;
+    openModal('modalDeleteReadiness');
+    setTimeout(function () { document.getElementById('deleteReadinessCancel').focus(); }, 150);
+}
 function editReadiness(data) {
     document.getElementById('readinessTitle').textContent = 'Edit Readiness';
     document.getElementById('readinessAction').value = 'update';
