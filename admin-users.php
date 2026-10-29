@@ -1,5 +1,6 @@
 <?php
 $page_title = 'User Management';
+require_once __DIR__ . '/includes/auth.php';
 require_role('system_admin');
 require_once __DIR__ . '/includes/header.php';
 $db = get_db();
