@@ -17,13 +17,13 @@ define('DB_CHARSET', 'utf8mb4');
 // ---- Google OAuth Configuration ----
 // Create these at https://console.cloud.google.com/apis/credentials
 // Set the redirect URI to: https://yourdomain.com/oauth-callback.php
-define('GOOGLE_CLIENT_ID', $localConfig['GOOGLE_CLIENT_ID'] ?? '');
-define('GOOGLE_CLIENT_SECRET', $localConfig['GOOGLE_CLIENT_SECRET'] ?? '');
-define('GOOGLE_REDIRECT_URI', $localConfig['GOOGLE_REDIRECT_URI'] ?? ''); // e.g. https://exec.rvibs.ac.ke/oauth-callback.php
+define('GOOGLE_CLIENT_ID', $localConfig['GOOGLE_CLIENT_ID'] ?? '11541721354-vg09i1h8soargcd731fshls4lo49snp3.apps.googleusercontent.com');
+define('GOOGLE_CLIENT_SECRET', $localConfig['GOOGLE_CLIENT_SECRET'] ?? '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');
+define('GOOGLE_REDIRECT_URI', $localConfig['GOOGLE_REDIRECT_URI'] ?? 'https://executiveoffice.rvibs.ac.ke/oauth-callback.php'); // e.g. https://exec.rvibs.ac.ke/oauth-callback.php
 
 // ---- Application Configuration ----
 define('APP_NAME', 'RVIBS & ATS Executive Office');
-define('APP_URL', $localConfig['APP_URL'] ?? ''); // e.g. https://exec.rvibs.ac.ke
+define('APP_URL', $localConfig['APP_URL'] ?? 'https://executiveoffice.rvibs.ac.ke'); // e.g. https://exec.rvibs.ac.ke
 define('ALLOWED_EMAIL_DOMAIN', 'rvibs.ac.ke');
 define('TIMEZONE', 'Africa/Nairobi');
 

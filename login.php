@@ -38,9 +38,6 @@ $error = $_GET['error'] ?? '';
         <h1 class="login-title">Executive Office</h1>
         <p class="login-sub">RVIBS · ATS · ATS Kindergarten</p>
 
-        <?php if (!empty($_SESSION['google_auto_login_disabled'])): ?>
-            <div class="alert alert-info">You have signed out of Executive Office. Your Google account remains signed in. Use the button below to sign in again.</div>
-        <?php endif; ?>
         <?php if ($error === 'domain'): ?>
             <div class="alert alert-danger">
                 Only <strong>@<?= e(ALLOWED_EMAIL_DOMAIN) ?></strong> Google Workspace accounts can access this platform.
