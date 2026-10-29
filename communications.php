@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Communications Agent';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -46,6 +47,7 @@ if ($detailId) {
     $stmt->execute([$detailId]);
     $detail = $stmt->fetch();
 }
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -172,13 +174,13 @@ if ($detailId) {
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Update</button>
-                    <form method="POST" style="display:inline" onsubmit="return confirm('Delete?')">
+                </form>
+                    <form method="POST" style="display:inline" data-delete-confirm="Delete?" onsubmit="return confirmDeleteForm(this, event)">
                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= $detail['id'] ?>">
                         <button class="btn-ghost btn-sm">Delete</button>
                     </form>
-                </form>
             </div>
         <?php else: ?>
             <div class="card-body">

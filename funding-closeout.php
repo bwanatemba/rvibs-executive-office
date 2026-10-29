@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Delivery & Closeout';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -57,7 +58,8 @@ if (!$awardId) {
         ORDER BY a.created_at DESC
     ")->fetchAll();
     $csrf = csrf_token();
-    ?>
+    require_once __DIR__ . '/includes/header.php';
+?>
 <div class="section-header">
     <div>
         <h2 class="section-title">Delivery & Closeout</h2>
@@ -148,7 +150,7 @@ $csrf = csrf_token();
                             <?php if ($m['description']): ?><div class="timeline-body"><?= e($m['description']) ?></div><?php endif; ?>
                             <?php if ($m['notes']): ?><div class="text-xs text-2 mt-1">Notes: <?= e($m['notes']) ?></div><?php endif; ?>
                             <button class="btn btn-outline btn-sm mt-2" onclick="editMilestone(<?= htmlspecialchars(json_encode($m), ENT_QUOTES) ?>)">Update</button>
-                            <form method="POST" style="display:inline" onsubmit="return confirm('Delete?')">
+                            <form method="POST" style="display:inline" data-delete-confirm="Delete?" onsubmit="return confirmDeleteForm(this, event)">
                                 <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                 <input type="hidden" name="action" value="delete_milestone">
                                 <input type="hidden" name="id" value="<?= $m['id'] ?>">

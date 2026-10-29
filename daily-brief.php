@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Daily Brief';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -58,6 +59,7 @@ if ($detailId) {
         $detailItems = $stmt->fetchAll();
     }
 }
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">

@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Awards & Disbursements';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -69,6 +70,7 @@ if ($detailId) {
 }
 $csrf = csrf_token();
 $canFinance = can('can_manage_finance');
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -156,7 +158,7 @@ $canFinance = can('can_manage_finance');
                                         <button class="btn btn-primary btn-sm">Validate</button>
                                     </form>
                                     <?php endif; ?>
-                                    <form method="POST" style="display:inline" onsubmit="return confirm('Delete?')">
+                                    <form method="POST" style="display:inline" data-delete-confirm="Delete?" onsubmit="return confirmDeleteForm(this, event)">
                                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                         <input type="hidden" name="action" value="delete_disbursement">
                                         <input type="hidden" name="id" value="<?= $d['id'] ?>">

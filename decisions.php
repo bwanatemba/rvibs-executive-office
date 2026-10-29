@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Delegated Authority';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -61,6 +62,7 @@ $decisions = $db->query("
 $users_list = get_users_list();
 $csrf = csrf_token();
 $canDecide = can('can_approve') || has_role('system_admin', 'chairman_ceo');
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">

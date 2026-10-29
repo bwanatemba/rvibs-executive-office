@@ -282,9 +282,9 @@ function toast_redirect($message, $url, $type = 'success') {
  */
 function render_session_toast() {
     if (!empty($_SESSION['toast_msg'])) {
-        $msg = e($_SESSION['toast_msg']);
-        $type = $_SESSION['toast_type'] ?? 'success';
-        echo "<script>document.addEventListener('DOMContentLoaded', function() { toast('$msg', '$type'); });</script>";
+        $msg = json_encode($_SESSION['toast_msg'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $type = json_encode($_SESSION['toast_type'] ?? 'success', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        echo "<script>document.addEventListener('DOMContentLoaded', function() { showSaveNotification($msg, $type); });</script>";
         unset($_SESSION['toast_msg'], $_SESSION['toast_type']);
     }
 }

@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Commitments';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 $userId = $user['id'];
@@ -63,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Filters
-$filterMine = $_GET['filter'] === 'mine';
+$filterMine = ($_GET['filter'] ?? '') === 'mine';
 $filterStatus = $_GET['status'] ?? '';
 
 $where = '1=1';
@@ -100,6 +101,7 @@ if ($detailId) {
         $deadlineChanges = $stmt->fetchAll();
     }
 }
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -154,7 +156,7 @@ if ($detailId) {
             <div>
                 <div class="flex gap-2 mb-3">
                     <button class="btn btn-outline btn-sm" onclick="editCommitment(<?= htmlspecialchars(json_encode($detailCommitment), ENT_QUOTES) ?>)">Edit</button>
-                    <form method="POST" style="display:inline" onsubmit="return confirm('Delete this commitment?')">
+                    <form method="POST" style="display:inline" data-delete-confirm="Delete this commitment?" onsubmit="return confirmDeleteForm(this, event)">
                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= $detailCommitment['id'] ?>">
@@ -240,7 +242,7 @@ if ($detailId) {
                                 <button class="btn-ghost btn-sm" onclick="editCommitment(<?= htmlspecialchars(json_encode($c), ENT_QUOTES) ?>)" title="Edit">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
-                                <form method="POST" style="display:inline" onsubmit="return confirm('Delete?')">
+                                <form method="POST" style="display:inline" data-delete-confirm="Delete?" onsubmit="return confirmDeleteForm(this, event)">
                                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= $c['id'] ?>">

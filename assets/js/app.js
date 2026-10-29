@@ -82,9 +82,36 @@ function toast(message, type = 'info') {
 
 // ---- Confirm delete ----
 function confirmDelete(message, callback) {
-    if (confirm(message)) {
+    document.getElementById('confirmDeleteMessage').textContent = message + ' This cannot be undone.';
+    const submit = document.getElementById('confirmDeleteSubmit');
+    submit.disabled = false;
+    submit.onclick = function () {
+        submit.disabled = true;
+        closeModal('modalConfirmDelete');
         callback();
+    };
+    openModal('modalConfirmDelete');
+    document.getElementById('confirmDeleteCancel').focus();
+}
+
+function confirmDeleteForm(form, event) {
+    if (form.dataset.deleteConfirmed === 'true') {
+        delete form.dataset.deleteConfirmed;
+        return true;
     }
+    const submitter = event.submitter;
+    confirmDelete(form.dataset.deleteConfirm || 'Delete this record?', function () {
+        form.dataset.deleteConfirmed = 'true';
+        form.requestSubmit(submitter || undefined);
+    });
+    return false;
+}
+
+function showSaveNotification(message, type) {
+    document.getElementById('saveNotificationTitle').textContent = type === 'success' ? 'Success' : 'Unable to complete action';
+    document.getElementById('saveNotificationMessage').textContent = message;
+    openModal('modalSaveNotification');
+    document.getElementById('saveNotificationDone').focus();
 }
 
 // ---- AJAX helper ----

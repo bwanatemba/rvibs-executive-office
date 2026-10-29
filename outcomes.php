@@ -1,6 +1,7 @@
 <?php
 $page_title = '90-Day Outcomes';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -45,6 +46,7 @@ $outcomes = $db->query('
 ')->fetchAll();
 $users_list = get_users_list();
 $csrf = csrf_token();
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -82,7 +84,7 @@ $csrf = csrf_token();
                             <button class="btn-ghost btn-sm" onclick="editOutcome(<?= htmlspecialchars(json_encode($o), ENT_QUOTES) ?>)" title="Edit">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </button>
-                            <form method="POST" style="display:inline" onsubmit="return confirm('Delete this outcome?')">
+                            <form method="POST" style="display:inline" data-delete-confirm="Delete this outcome?" onsubmit="return confirmDeleteForm(this, event)">
                                 <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $o['id'] ?>">

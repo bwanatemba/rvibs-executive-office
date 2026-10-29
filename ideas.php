@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Ideas Pipeline';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -60,6 +61,7 @@ $converted = array_filter($ideas, fn($i) => $i['status'] === 'converted');
 $users_list = get_users_list();
 $csrf = csrf_token();
 $canApprove = can('can_approve') || has_role('system_admin');
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">

@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Escalations';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -40,6 +41,7 @@ $escalations = $db->query("
     $where ORDER BY FIELD(e.priority,'critical','high','medium'), e.raised_at DESC
 ")->fetchAll();
 $csrf = csrf_token();
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -90,7 +92,7 @@ $csrf = csrf_token();
                                         <button class="btn btn-outline btn-sm">Reopen</button>
                                     </form>
                                 <?php endif; ?>
-                                <form method="POST" style="display:inline" onsubmit="return confirm('Delete?')">
+                                <form method="POST" style="display:inline" data-delete-confirm="Delete?" onsubmit="return confirmDeleteForm(this, event)">
                                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= $e['id'] ?>">

@@ -2,7 +2,6 @@
 $page_title = 'User Management';
 require_once __DIR__ . '/includes/auth.php';
 require_role('system_admin');
-require_once __DIR__ . '/includes/header.php';
 $db = get_db();
 $user = current_user();
 
@@ -34,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $users = $db->query('SELECT u.*, r.role_key, r.name AS role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY r.sort_order, u.name')->fetchAll();
 $roles = $db->query('SELECT * FROM roles ORDER BY sort_order')->fetchAll();
 $csrf = csrf_token();
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -72,7 +72,7 @@ $csrf = csrf_token();
                     <td class="text-sm text-3"><?= e(fmt_datetime($u['last_login'])) ?></td>
                     <td>
                         <?php if ($u['email'] !== 'support@rvibs.ac.ke' && $u['id'] != $user['id']): ?>
-                        <form method="POST" style="display:inline" onsubmit="return confirm('Delete this user?')">
+                        <form method="POST" style="display:inline" data-delete-confirm="Delete this user?" onsubmit="return confirmDeleteForm(this, event)">
                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
