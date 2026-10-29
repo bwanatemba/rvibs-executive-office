@@ -55,8 +55,8 @@ $filter = $_GET['status'] ?? 'all';
 $where = '';
 if ($filter && $filter !== 'all') { $where = 'WHERE d.status = ' . $db->quote($filter); }
 $decisions = $db->query("
-    SELECT d.*, u.name as owner_name, dec.name as decided_by_name
-    FROM decisions d LEFT JOIN users u ON d.owner_id = u.id LEFT JOIN users dec ON d.decided_by = dec.id
+    SELECT d.*, u.name as owner_name, decision_maker.name as decided_by_name
+    FROM decisions d LEFT JOIN users u ON d.owner_id = u.id LEFT JOIN users decision_maker ON d.decided_by = decision_maker.id
     $where ORDER BY FIELD(d.status,'pending','escalated','approved','declined'), d.created_at DESC
 ")->fetchAll();
 $users_list = get_users_list();

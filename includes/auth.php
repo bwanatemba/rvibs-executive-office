@@ -208,7 +208,7 @@ function status_label($status) {
  */
 function get_users_list() {
     $db = get_db();
-    return $db->query('SELECT id, name, email, role_key FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE status = "active" ORDER BY name')->fetchAll();
+    return $db->query('SELECT u.id, u.name, u.email, r.role_key FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.status = "active" ORDER BY u.name')->fetchAll();
 }
 
 /**
