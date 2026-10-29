@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Partners';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/auth.php';
+require_login();
 $db = get_db();
 $user = current_user();
 
@@ -21,7 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare('UPDATE partners SET name=?, type=?, contact_person=?, email=?, phone=?, relationship_summary=?, stewardship_notes=?, renewal_opportunities=? WHERE id=?')->execute($data);
             log_action('update', 'partner', $id);
         }
-        toast_redirect('Partner saved', 'partners.php');
+        $_SESSION['partner_save_success'] = $action === 'create'
+            ? 'New partner saved successfully.'
+            : 'Partner details updated successfully.';
+        redirect('partners.php');
     } elseif ($action === 'delete') {
         $id = (int)$_POST['id'];
         $db->prepare('DELETE FROM partners WHERE id=?')->execute([$id]);
@@ -33,6 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $partners = $db->query('SELECT * FROM partners ORDER BY name')->fetchAll();
 $csrf = csrf_token();
 $typeLabels = ['grant_body' => 'Grant Body', 'donor' => 'Donor', 'partner' => 'Partner', 'institution' => 'Institution'];
+$saveSuccess = $_SESSION['partner_save_success'] ?? '';
+unset($_SESSION['partner_save_success']);
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="section-header">
@@ -40,7 +47,7 @@ $typeLabels = ['grant_body' => 'Grant Body', 'donor' => 'Donor', 'partner' => 'P
         <h2 class="section-title">Partners</h2>
         <p class="section-sub">Partner relationships, stewardship and renewal opportunities</p>
     </div>
-    <button class="btn btn-primary" onclick="openModal('modalPartner')">
+    <button class="btn btn-primary" onclick="addPartner()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Partner
     </button>
@@ -71,12 +78,7 @@ $typeLabels = ['grant_body' => 'Grant Body', 'donor' => 'Donor', 'partner' => 'P
                     <?php if ($p['renewal_opportunities']): ?><div class="alert alert-info" style="padding:0.4rem 0.625rem; font-size:0.75rem;"><strong>Renewal:</strong> <?= e($p['renewal_opportunities']) ?></div><?php endif; ?>
                     <div class="flex gap-2 mt-2">
                         <button class="btn btn-outline btn-sm" onclick="editPartner(<?= htmlspecialchars(json_encode($p), ENT_QUOTES) ?>)">Edit</button>
-                        <form method="POST" style="display:inline" onsubmit="return confirm('Delete?')">
-                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= $p['id'] ?>">
-                            <button class="btn-ghost btn-sm">Delete</button>
-                        </form>
+                        <button type="button" class="btn-ghost btn-sm" data-partner-id="<?= (int)$p['id'] ?>" data-partner-name="<?= e($p['name']) ?>" onclick="confirmDeletePartner(this)">Delete</button>
                     </div>
                 </div>
             </div>
@@ -113,7 +115,60 @@ $typeLabels = ['grant_body' => 'Grant Body', 'donor' => 'Donor', 'partner' => 'P
     </div>
 </div>
 
+<div class="modal-overlay" id="modalDeletePartner">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deletePartnerTitle" aria-describedby="deletePartnerMessage">
+        <div class="modal-header">
+            <h2 class="modal-title" id="deletePartnerTitle">Delete partner?</h2>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('modalDeletePartner')">&times;</button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" id="deletePartnerId">
+            <div class="modal-body">
+                <p id="deletePartnerMessage">Are you sure you want to delete <strong id="deletePartnerName"></strong>? This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="deletePartnerCancel" onclick="closeModal('modalDeletePartner')">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete Partner</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php if ($saveSuccess): ?>
+<div class="modal-overlay" id="modalPartnerSuccess">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="partnerSuccessTitle" aria-describedby="partnerSuccessMessage">
+        <div class="modal-header">
+            <h2 class="modal-title" id="partnerSuccessTitle">Partner saved</h2>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('modalPartnerSuccess')">&times;</button>
+        </div>
+        <div class="modal-body"><p id="partnerSuccessMessage" role="status"><?= e($saveSuccess) ?></p></div>
+        <div class="modal-footer"><button type="button" class="btn btn-primary" id="partnerSuccessDone" onclick="closeModal('modalPartnerSuccess')">Done</button></div>
+    </div>
+</div>
+<?php endif; ?>
+
 <script>
+<?php if ($saveSuccess): ?>
+document.addEventListener('DOMContentLoaded', function () {
+    openModal('modalPartnerSuccess');
+    document.getElementById('partnerSuccessDone').focus();
+});
+<?php endif; ?>
+function addPartner() {
+    document.querySelector('#modalPartner form').reset();
+    document.getElementById('partnerTitle').textContent = 'Add Partner';
+    document.getElementById('partnerAction').value = 'create';
+    document.getElementById('partnerId').value = '';
+    openModal('modalPartner');
+}
+function confirmDeletePartner(button) {
+    document.getElementById('deletePartnerId').value = button.dataset.partnerId;
+    document.getElementById('deletePartnerName').textContent = button.dataset.partnerName;
+    openModal('modalDeletePartner');
+    setTimeout(function () { document.getElementById('deletePartnerCancel').focus(); }, 150);
+}
 function editPartner(data) {
     document.getElementById('partnerTitle').textContent = 'Edit Partner';
     document.getElementById('partnerAction').value = 'update';
