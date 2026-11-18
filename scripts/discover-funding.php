@@ -281,7 +281,7 @@ function funding_discovery(bool $dryRun, array $config): void
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
-            $db->query("SELECT RELEASE_LOCK(CONCAT('funding:', MD5(DATABASE()))");
+            $db->query("SELECT RELEASE_LOCK(CONCAT('funding:', MD5(DATABASE())))");
         }
     }
 }
