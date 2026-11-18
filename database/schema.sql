@@ -256,7 +256,13 @@ CREATE TABLE IF NOT EXISTS `funding_opportunities` (
   `currency` VARCHAR(10) DEFAULT 'KES',
   `deadline` DATE DEFAULT NULL,
   `description` TEXT,
-  `type` ENUM('grant','equipment_donation','staff_exchange','student_exchange','partnership') DEFAULT 'grant',
+  `type` ENUM('grant','equipment_donation','staff_exchange','student_exchange','partnership','service_contract','matching_grant','challenge_prize','scholarship_sponsorship','impact_investment','concessional_loan','public_private_partnership','in_kind_support') DEFAULT 'grant',
+  `category` VARCHAR(100) DEFAULT NULL,
+  `applicant_institution` ENUM('RVIBS','ATS','joint') DEFAULT NULL,
+  `eligibility_summary` TEXT,
+  `discovery_evidence` TEXT,
+  `discovery_key` CHAR(64) DEFAULT NULL,
+  UNIQUE KEY uq_funding_discovery_key (discovery_key),
   `status` ENUM('discovered','verified','ineligible','eligible','pursuing','preparing','submitted','monitoring','awarded','declined','closed') DEFAULT 'discovered',
   `discovered_by` INT,
   `discovered_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -267,6 +273,15 @@ CREATE TABLE IF NOT EXISTS `funding_opportunities` (
   FOREIGN KEY (`discovered_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   FOREIGN KEY (`verified_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------
+-- Table: funding_discovery_runs
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS funding_discovery_runs (
+  run_date DATE PRIMARY KEY,
+  imported_count INT UNSIGNED NOT NULL,
+  completed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- -----------------------------------------------------
 -- Table: funding_eligibility_checks

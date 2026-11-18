@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Funding Opportunities';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/funding-classification.php';
 require_login();
 $db = get_db();
 $user = current_user();
@@ -9,25 +10,33 @@ $user = current_user();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? '';
+    $category = in_array($_POST['category'] ?? '', FUNDING_CATEGORIES, true) ? $_POST['category'] : null;
+    $applicant = array_key_exists($_POST['applicant_institution'] ?? '', FUNDING_APPLICANTS) ? $_POST['applicant_institution'] : null;
     if ($action === 'create') {
-        $stmt = $db->prepare('INSERT INTO funding_opportunities (title, funder, url, source, amount, currency, deadline, description, type, status, discovered_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+        $stmt = $db->prepare('INSERT INTO funding_opportunities (title, funder, url, source, amount, currency, deadline, description, type, status, discovered_by, category, applicant_institution, eligibility_summary) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute([$_POST['title'], $_POST['funder'] ?? null, $_POST['url'] ?? null, $_POST['source'] ?? null,
             $_POST['amount'] ?: null, $_POST['currency'] ?? 'KES', $_POST['deadline'] ?: null,
-            $_POST['description'] ?? null, $_POST['type'] ?? 'grant', 'discovered', $user['id']]);
+            $_POST['description'] ?? null, $_POST['type'] ?? 'grant', 'discovered', $user['id'],
+            $category, $applicant, $_POST['eligibility_summary'] ?? null]);
         $id = $db->lastInsertId();
         log_action('create', 'opportunity', $id, null, $_POST);
         toast_redirect('Opportunity discovered', 'funding-opportunities.php?id=' . $id);
     } elseif ($action === 'update') {
         $id = (int)$_POST['id'];
-        $stmt = $db->prepare('UPDATE funding_opportunities SET title=?, funder=?, url=?, source=?, amount=?, currency=?, deadline=?, description=?, type=? WHERE id=?');
+        $stmt = $db->prepare('UPDATE funding_opportunities SET title=?, funder=?, url=?, source=?, amount=?, currency=?, deadline=?, description=?, type=?, category=?, applicant_institution=?, eligibility_summary=? WHERE id=?');
         $stmt->execute([$_POST['title'], $_POST['funder'] ?? null, $_POST['url'] ?? null, $_POST['source'] ?? null,
             $_POST['amount'] ?: null, $_POST['currency'] ?? 'KES', $_POST['deadline'] ?: null,
-            $_POST['description'] ?? null, $_POST['type'] ?? 'grant', $id]);
+            $_POST['description'] ?? null, $_POST['type'] ?? 'grant', $category, $applicant,
+            $_POST['eligibility_summary'] ?? null, $id]);
         log_action('update', 'opportunity', $id);
         toast_redirect('Opportunity updated', 'funding-opportunities.php?id=' . $id);
     } elseif ($action === 'status') {
         $id = (int)$_POST['id'];
         $status = $_POST['status'];
+        if (in_array($status, ['eligible', 'pursuing', 'preparing', 'submitted'], true)
+            && funding_needs_eligibility_check($db, $id)) {
+            toast_redirect('Record a passing eligibility check first', 'funding-opportunities.php?id=' . $id, 'error');
+        }
         $db->prepare('UPDATE funding_opportunities SET status=? WHERE id=?')->execute([$status, $id]);
         if ($status === 'verified') { $db->prepare('UPDATE funding_opportunities SET verified_by=?, verified_at=NOW() WHERE id=?')->execute([$user['id'], $id]); }
         log_action('status_change', 'opportunity', $id, null, ['status' => $status]);
@@ -64,7 +73,27 @@ $detailId = (int)($_GET['id'] ?? 0);
 
 // Pipeline data
 $pipelineStages = ['discovered' => 'Discovered', 'verified' => 'Verified', 'eligible' => 'Eligible', 'pursuing' => 'Pursuing', 'preparing' => 'Preparing', 'submitted' => 'Submitted', 'monitoring' => 'Monitoring', 'awarded' => 'Awarded', 'declined' => 'Declined', 'closed' => 'Closed'];
-$opportunities = $db->query('SELECT fo.*, u.name as discovered_by_name FROM funding_opportunities fo LEFT JOIN users u ON fo.discovered_by = u.id ORDER BY fo.created_at DESC')->fetchAll();
+$filters = [
+    'category' => array_combine(FUNDING_CATEGORIES, FUNDING_CATEGORIES),
+    'applicant_institution' => FUNDING_APPLICANTS,
+    'type' => FUNDING_TYPES,
+];
+$filterLabels = ['category' => 'All categories', 'applicant_institution' => 'All applicants', 'type' => 'All mechanisms'];
+$conditions = $parameters = [];
+foreach ($filters as $field => $options) {
+    $value = $_GET[$field] ?? '';
+    if (is_string($value) && isset($options[$value])) {
+        $conditions[] = $field . ' = ?';
+        $parameters[$field] = $value;
+    }
+}
+$opportunities = [];
+if (!$detailId) {
+    $where = $conditions ? ' WHERE ' . implode(' AND ', $conditions) : '';
+    $stmt = $db->prepare('SELECT * FROM funding_opportunities' . $where . ' ORDER BY created_at DESC');
+    $stmt->execute(array_values($parameters));
+    $opportunities = $stmt->fetchAll();
+}
 
 // Detail view
 $detail = null;
@@ -75,7 +104,7 @@ if ($detailId) {
     $stmt->execute([$detailId]);
     $detail = $stmt->fetch();
     if ($detail) {
-        $stmt = $db->prepare('SELECT ec.*, u.name as checked_by_name FROM funding_eligibility_checks ec LEFT JOIN users u ON ec.checked_by = u.id WHERE ec.opportunity_id=? ORDER BY ec.checked_at DESC');
+        $stmt = $db->prepare('SELECT ec.*, u.name as checked_by_name FROM funding_eligibility_checks ec LEFT JOIN users u ON ec.checked_by = u.id WHERE ec.opportunity_id=? ORDER BY ec.checked_at DESC, ec.id DESC');
         $stmt->execute([$detailId]);
         $eligibilityChecks = $stmt->fetchAll();
         $stmt = $db->prepare('SELECT fp.*, u.name as owner_name FROM funding_preparations fp LEFT JOIN users u ON fp.owner_id = u.id WHERE fp.opportunity_id=?');
@@ -118,13 +147,23 @@ require_once __DIR__ . '/includes/header.php';
             <div>
                 <div class="grid grid-2 gap-2 mb-3">
                     <div><span class="text-xs text-3">Funder:</span><div class="text-sm fw-600"><?= e($detail['funder'] ?? '—') ?></div></div>
-                    <div><span class="text-xs text-3">Type:</span><div class="text-sm fw-600"><?= status_label($detail['type']) ?></div></div>
+                    <div><span class="text-xs text-3">Funding mechanism</span><div class="text-sm fw-600"><?= e(FUNDING_TYPES[$detail['type']] ?? '—') ?></div></div>
+                    <div><span class="text-xs text-3">Category</span><div class="text-sm fw-600"><?= e($detail['category'] ?? '—') ?></div></div>
+                    <div><span class="text-xs text-3">Potential applicant</span><div class="text-sm fw-600"><?= e(FUNDING_APPLICANTS[$detail['applicant_institution']] ?? '—') ?></div></div>
                     <div><span class="text-xs text-3">Amount:</span><div class="text-sm fw-600"><?= $detail['amount'] ? e(number_format($detail['amount'])) . ' ' . e($detail['currency']) : '—' ?></div></div>
                     <div><span class="text-xs text-3">Deadline:</span><div class="text-sm fw-600"><?= e(fmt_date($detail['deadline'])) ?> <?php if($detail['deadline']): $d=days_until($detail['deadline']); if($d!==null&&$d<14) echo '<span style="color:var(--c-warning)">('.$d.'d)</span>'; endif; ?></div></div>
                 </div>
-                <?php if ($detail['url']): ?><div class="mb-2"><a href="<?= e($detail['url']) ?>" target="_blank" class="cell-link text-sm">View source ↗</a></div><?php endif; ?>
+                <?php if (preg_match('~^https?://~i', $detail['url'] ?? '')): ?><div class="mb-2"><a href="<?= e($detail['url']) ?>" target="_blank" rel="noopener noreferrer" class="cell-link text-sm">View source ↗</a></div><?php endif; ?>
                 <?php if ($detail['description']): ?><div class="text-sm text-2 mt-2"><?= nl2br(e($detail['description'])) ?></div><?php endif; ?>
-                <div class="text-xs text-3 mt-2">Discovered by <?= e($detail['discovered_by_name'] ?? 'Unknown') ?><?php if($detail['verified_by_name']): ?> · Verified by <?= e($detail['verified_by_name']) ?><?php endif; ?></div>
+                <?php if (!empty($detail['eligibility_summary'])): ?>
+                    <h4 class="text-sm fw-600 mt-2">Preliminary eligibility</h4>
+                    <p class="text-sm text-2"><?= e($detail['eligibility_summary']) ?></p>
+                <?php endif; ?>
+                <?php if (!empty($detail['discovery_evidence'])): ?>
+                    <h4 class="text-sm fw-600 mt-2">Application window evidence</h4>
+                    <blockquote class="text-sm text-2"><?= e($detail['discovery_evidence']) ?></blockquote>
+                <?php endif; ?>
+                <div class="text-xs text-3 mt-2">Discovered by <?= e(!empty($detail['discovery_key']) ? 'Daily web search' : ($detail['discovered_by_name'] ?? 'Unknown')) ?><?php if($detail['verified_by_name']): ?> · Verified by <?= e($detail['verified_by_name']) ?><?php endif; ?></div>
             </div>
             <div>
                 <h4 class="text-sm fw-600 mb-2">Status</h4>
@@ -202,6 +241,17 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 <?php else: ?>
 <!-- PIPELINE VIEW -->
+<form method="GET" class="flex gap-2 mb-4">
+    <?php foreach ($filters as $field => $options): ?>
+        <select name="<?= e($field) ?>" class="form-control" aria-label="<?= e($filterLabels[$field]) ?>">
+            <option value=""><?= e($filterLabels[$field]) ?></option>
+            <?php foreach ($options as $value => $label): ?>
+                <option value="<?= e($value) ?>" <?= ($parameters[$field] ?? '') === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+            <?php endforeach; ?>
+        </select>
+    <?php endforeach; ?>
+    <button class="btn btn-outline btn-sm">Filter</button>
+</form>
 <div class="pipeline">
     <?php
     $stages = ['discovered' => 'Discovered', 'verified' => 'Verified', 'eligible' => 'Eligible', 'pursuing' => 'Pursuing', 'preparing' => 'Preparing', 'submitted' => 'Submitted', 'monitoring' => 'Monitoring', 'awarded' => 'Awarded', 'declined' => 'Declined'];
@@ -221,7 +271,8 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="fw-600 text-sm mb-1"><?= e($o['title']) ?></div>
                     <div class="text-xs text-3 mb-1"><?= e($o['funder'] ?? 'Unknown funder') ?></div>
                     <div class="flex items-center justify-between mt-2">
-                        <span class="badge badge-neutral"><?= status_label($o['type']) ?></span>
+                        <span class="badge badge-neutral"><?= e(FUNDING_TYPES[$o['type']] ?? '—') ?></span>
+                        <?php if (!empty($o['applicant_institution'])): ?><span class="text-xs"><?= e(FUNDING_APPLICANTS[$o['applicant_institution']]) ?></span><?php endif; ?>
                         <?php if ($o['amount']): ?><span class="text-xs fw-600"><?= e(number_format($o['amount'], 0)) ?> <?= e($o['currency']) ?></span><?php endif; ?>
                     </div>
                     <?php if ($o['deadline']): $d = days_until($o['deadline']); ?>
@@ -234,7 +285,9 @@ require_once __DIR__ . '/includes/header.php';
     <?php endforeach; ?>
 </div>
 
-<?php if (empty($opportunities)): ?>
+<?php if (empty($opportunities) && $parameters): ?>
+<p class="text-sm mt-4">No opportunities match these filters.</p>
+<?php elseif (empty($opportunities)): ?>
 <div class="card mt-4">
     <div class="card-body">
         <div class="empty-state">
@@ -268,10 +321,20 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="form-group"><label class="form-label">Deadline</label><input type="date" name="deadline" class="form-control"></div>
                 </div>
                 <div class="form-group"><label class="form-label">URL</label><input type="url" name="url" class="form-control" placeholder="Official source link"></div>
-                <div class="form-group"><label class="form-label">Type</label><select name="type" class="form-control">
-                    <option value="grant">Grant</option><option value="equipment_donation">Equipment Donation</option>
-                    <option value="staff_exchange">Staff Exchange</option><option value="student_exchange">Student Exchange</option><option value="partnership">Partnership</option>
+                <div class="form-group"><label class="form-label">Funding mechanism</label><select name="type" class="form-control">
+                    <?php foreach (FUNDING_TYPES as $value => $label): ?><option value="<?= e($value) ?>"><?= e($label) ?></option><?php endforeach; ?>
                 </select></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Category</label><select name="category" class="form-control">
+                        <option value="">Unclassified</option>
+                        <?php foreach (FUNDING_CATEGORIES as $category): ?><option><?= e($category) ?></option><?php endforeach; ?>
+                    </select></div>
+                    <div class="form-group"><label class="form-label">Potential applicant</label><select name="applicant_institution" class="form-control">
+                        <option value="">Unassigned</option>
+                        <?php foreach (FUNDING_APPLICANTS as $value => $label): ?><option value="<?= e($value) ?>"><?= e($label) ?></option><?php endforeach; ?>
+                    </select></div>
+                </div>
+                <div class="form-group"><label class="form-label">Preliminary eligibility</label><textarea name="eligibility_summary" class="form-control" rows="3"></textarea></div>
                 <div class="form-group"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="3"></textarea></div>
                 <div class="alert alert-info">
                     Donated equipment must be assessed for transport, installation, training and maintenance costs — not treated as "free" merely because it is donated.
@@ -353,6 +416,9 @@ function editOpportunity(data) {
     form.querySelector('[name="deadline"]').value = (data.deadline || '').split(' ')[0];
     form.querySelector('[name="url"]').value = data.url || '';
     form.querySelector('[name="type"]').value = data.type || 'grant';
+    form.querySelector('[name="category"]').value = data.category || '';
+    form.querySelector('[name="applicant_institution"]').value = data.applicant_institution || '';
+    form.querySelector('[name="eligibility_summary"]').value = data.eligibility_summary || '';
     form.querySelector('[name="description"]').value = data.description || '';
     openModal('modalOpportunity');
 }

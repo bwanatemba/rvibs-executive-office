@@ -38,7 +38,7 @@ ini_set('log_errors', 1);
 date_default_timezone_set(TIMEZONE);
 
 // Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
+if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => SESSION_TIMEOUT,
         'path' => '/',

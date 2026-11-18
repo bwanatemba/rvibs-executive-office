@@ -1,6 +1,7 @@
 <?php
 $page_title = 'Applications';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/funding-classification.php';
 require_login();
 $db = get_db();
 $user = current_user();
@@ -9,11 +10,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? '';
     if ($action === 'create') {
+        $opportunityId = (int)$_POST['opportunity_id'];
+        if (funding_needs_eligibility_check($db, $opportunityId)) {
+            toast_redirect('Record a passing eligibility check first', 'funding-opportunities.php?id=' . $opportunityId, 'error');
+        }
         $stmt = $db->prepare('INSERT INTO funding_applications (opportunity_id, title, notes) VALUES (?,?,?)');
-        $stmt->execute([$_POST['opportunity_id'], $_POST['title'] ?? null, $_POST['notes'] ?? null]);
+        $stmt->execute([$opportunityId, $_POST['title'] ?? null, $_POST['notes'] ?? null]);
         $id = $db->lastInsertId();
         // Update opportunity status
-        $db->prepare('UPDATE funding_opportunities SET status="submitted" WHERE id=?')->execute([$_POST['opportunity_id']]);
+        $db->prepare('UPDATE funding_opportunities SET status="submitted" WHERE id=?')->execute([$opportunityId]);
         log_action('create', 'application', $id);
         toast_redirect('Application created', 'funding-applications.php?id=' . $id);
     } elseif ($action === 'review') {

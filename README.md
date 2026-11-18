@@ -93,6 +93,21 @@ Visit `https://yourdomain.com/login.php` and sign in with your @rvibs.ac.ke Goog
 
 The system administrator (support@rvibs.ac.ke) can assign roles to other users via User Management.
 
+## Daily funding discovery
+
+The discovery job uses [Tavily Search](https://docs.tavily.com/documentation/api-reference/endpoint/search) to search the public web and the named funding platforms. It uses [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat) to classify candidate calls from the retrieved text. Candidates with a future or same-day deadline, or evidence of rolling applications, enter **Funding Opportunities → Discovered** with a source link and preliminary eligibility summary. Staff record a passing eligibility check before moving an imported call into active pursuit. Search coverage depends on publicly indexed pages.
+
+1. For an existing database, apply [the funding discovery migration](database/funding-discovery.sql) once before serving the updated app. For a fresh install, use the full schema.
+2. Set `TAVILY_API_KEY` and `OPENAI_API_KEY` in the ignored `config/config.local.php` array or in the cron environment. Optionally set `FUNDING_OPENAI_MODEL` to a Chat Completions model that supports JSON mode. The default is `gpt-4.1-mini`. The CLI needs PHP cURL and PDO MySQL.
+3. From the deployed app directory, run `php scripts/discover-funding.php --dry-run` to preview results, then run `php scripts/discover-funding.php` for the first import.
+4. In **cPanel → Cron Jobs**, schedule the command once daily. The example runs at 06:00 on a UTC server, which is 09:00 in Nairobi. Substitute the actual PHP binary, account name and application path, and adjust the hour for the server's timezone.
+
+```cron
+0 6 * * * /usr/local/bin/php /home/CPANEL_USER/public_html/scripts/discover-funding.php >> /home/CPANEL_USER/funding-discovery.log 2>&1
+```
+
+The app records each successful run by Nairobi date, including runs that find zero new calls. A failed run exits with an error and can be retried using the same command. Check `funding_discovery_runs` for completion counts and the cron log for errors.
+
 ## File Structure
 
 ```
