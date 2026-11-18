@@ -235,6 +235,17 @@ function funding_save(PDO $db, string $today, array $candidates): int
     return $count;
 }
 
+function funding_setting(string $name, array $config, string $default = ''): string
+{
+    $values = [getenv($name), $config[$name] ?? null, defined($name) ? constant($name) : null];
+    foreach ($values as $value) {
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+    }
+    return $default;
+}
+
 function funding_discovery(bool $dryRun, array $config): void
 {
     $today = date('Y-m-d');
@@ -254,11 +265,19 @@ function funding_discovery(bool $dryRun, array $config): void
                 return;
             }
         }
-        $tavilyKey = getenv('TAVILY_API_KEY') ?: ($config['TAVILY_API_KEY'] ?? '');
-        $openaiKey = getenv('OPENAI_API_KEY') ?: ($config['OPENAI_API_KEY'] ?? '');
-        $model = getenv('FUNDING_OPENAI_MODEL') ?: ($config['FUNDING_OPENAI_MODEL'] ?? 'gpt-4.1-mini');
-        if ($tavilyKey === '' || $openaiKey === '' || !function_exists('curl_init')) {
-            throw new RuntimeException('Funding discovery requires PHP cURL, TAVILY_API_KEY and OPENAI_API_KEY.');
+        if (!function_exists('curl_init')) {
+            throw new RuntimeException('Enable the cURL extension for the PHP CLI binary running funding discovery.');
+        }
+        $tavilyKey = funding_setting('TAVILY_API_KEY', $config);
+        $openaiKey = funding_setting('OPENAI_API_KEY', $config);
+        $model = funding_setting('FUNDING_OPENAI_MODEL', $config, 'gpt-4.1-mini');
+        $missing = array_keys(array_filter(
+            ['TAVILY_API_KEY' => $tavilyKey, 'OPENAI_API_KEY' => $openaiKey],
+            static fn (string $key): bool => $key === ''
+        ));
+        if ($missing) {
+            throw new RuntimeException('Missing funding discovery settings: ' . implode(', ', $missing)
+                . '. Set them in the CLI environment, config/config.local.php, or config/config.php.');
         }
         $candidates = [];
         foreach (FUNDING_SEARCHES as [$topic, $domains]) {
