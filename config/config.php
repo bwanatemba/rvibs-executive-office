@@ -27,6 +27,13 @@ define('APP_URL', $localConfig['APP_URL'] ?? 'https://executiveoffice.rvibs.ac.k
 define('ALLOWED_EMAIL_DOMAIN', 'rvibs.ac.ke');
 define('TIMEZONE', 'Africa/Nairobi');
 
+// OpenAI Configuration
+define('OPENAI_API_KEY', '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');
+define('TAVILY_API_KEY', 'tvly-2sMk8C-bPr5ZfwoS8MXfq6CiQZTLqNQJiO1cF1pMB4hB7Z8Z6');
+define('OPENAI_MODEL', 'gpt-6-luna');
+define('FUNDING_OPENAI_MODEL', 'gpt-6-luna');
+define('OPENAI_MAX_TOKENS', 2000);
+
 // ---- Session Configuration ----
 define('SESSION_TIMEOUT', 28800); // 8 hours in seconds
 
